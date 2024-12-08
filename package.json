@@ -1,14 +1,39 @@
 {
-  "name": "url-shorter-cf",
-  "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy --minify"
-  },
-  "dependencies": {
-    "hono": "^4.6.13"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241112.0",
-    "wrangler": "^3.88.0"
-  }
+	"name": "url-shorter-cf",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "remix vite:dev",
+		"build": "remix vite:build",
+		"deploy": "bun run build && wrangler deploy",
+		"start": "wrangler dev",
+		"typegen": "wrangler types"
+	},
+	"dependencies": {
+		"@remix-run/cloudflare": "^2.15.0",
+		"@remix-run/react": "^2.15.0",
+		"hono": "^4.6.13",
+		"hono-remix-adapter": "^0.5.4",
+		"isbot": "^5.1.17",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@cloudflare/workers-types": "^4.20241205.0",
+		"@hono/vite-dev-server": "^0.17.0",
+		"@remix-run/dev": "^2.15.0",
+		"@types/react": "^19.0.1",
+		"@types/react-dom": "^19.0.1",
+		"autoprefixer": "^10.4.20",
+		"postcss": "^8.4.49",
+		"tailwindcss": "^3.4.16",
+		"typescript": "^5.7.2",
+		"vite": "^6.0.3",
+		"vite-tsconfig-paths": "^5.1.4",
+		"wrangler": "^3.88.0"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
 }
