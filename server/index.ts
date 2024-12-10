@@ -1,4 +1,6 @@
+import { vValidator } from "@hono/valibot-validator";
 import { Hono } from "hono";
+import { number, object, string } from "valibot";
 
 const app = new Hono<{
 	Bindings: {
@@ -15,11 +17,25 @@ app.use(async (c, next) => {
 	c.header("X-Powered-By", "Remix and Hono");
 });
 
-app.get("/api", (c) => {
+const routes = app.get("/api", (c) => {
 	return c.json({
 		message: "Hello",
 		var: c.env.MY_VAR,
 	});
 });
+
+const schema = object({
+	name: string(),
+	age: number(),
+});
+
+const appRouter = app.post("/api/users", vValidator("json", schema), (c) => {
+	const data = c.req.valid("json");
+	return c.json({
+		message: `${data.name} is ${data.age.toString()} years old`,
+	});
+});
+
+export type AppType = typeof appRouter;
 
 export default app;

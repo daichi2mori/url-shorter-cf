@@ -5,6 +5,8 @@ assets = { directory = "./build/client" }
 
 [vars]
 MY_VAR = "my-variable"
+BASE_URL = "http://localhost:5173/"
+
 
 # compatibility_flags = [ "nodejs_compat" ]
 
