@@ -4,25 +4,15 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
+import type { Bindings } from "types";
 import { number, object, string } from "valibot";
-import { calculateJSTExpirationISO, generateJSTISOTime } from "./utils";
+import {
+	calculateJSTExpirationISO,
+	generateJSTISOTime,
+	isPastDate,
+} from "./utils";
 
-type Bindings = {
-	DB: D1Database;
-	MY_VAR: string;
-};
-
-type Variables = {
-	MY_VAR_IN_VARIABLES: string;
-};
-
-const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
-
-app.use(async (c, next) => {
-	c.set("MY_VAR_IN_VARIABLES", "My variable set in c.set");
-	await next();
-	c.header("X-Powered-By", "Remix and Hono");
-});
+const app = new Hono<{ Bindings: Bindings }>();
 
 app.get("/:id", async (c) => {
 	const id = c.req.param("id");
@@ -33,8 +23,7 @@ app.get("/:id", async (c) => {
 		return c.json({ error: "URL not found" }, 404);
 	}
 
-	const now = new Date();
-	if (new Date(url.expirationDate) < now) {
+	if (isPastDate(url.expirationDate)) {
 		return c.json({ error: "URL expired" }, 410);
 	}
 
@@ -48,25 +37,14 @@ app.get("/url/all", async (c) => {
 });
 
 const schema = object({
-	name: string(),
-	age: number(),
-});
-
-const appRouter = app.post("/api/users", vValidator("json", schema), (c) => {
-	const data = c.req.valid("json");
-	return c.json({
-		message: `${data.name} is ${data.age.toString()} years old`,
-	});
-});
-
-const urlSchema = object({
 	url: string(),
 	expirationDays: number(),
 });
 
-app.post("shorter", vValidator("json", urlSchema), async (c) => {
+const appRouter = app.post("shorter", vValidator("json", schema), async (c) => {
 	const { url, expirationDays } = c.req.valid("json");
 	const id = nanoid(8);
+	const expirationDate = calculateJSTExpirationISO(expirationDays);
 
 	const db = drizzle(c.env.DB);
 	const result = await db
@@ -74,13 +52,15 @@ app.post("shorter", vValidator("json", urlSchema), async (c) => {
 		.values({
 			id: id,
 			originalUrl: url,
-			expirationDate: calculateJSTExpirationISO(expirationDays),
+			expirationDate: expirationDate,
 			createdAt: generateJSTISOTime().toISOString(),
 		})
-		.returning()
+		.returning({ id: urls.id })
 		.get();
 
-	return c.json(result);
+	const shortUrl = `${c.env.BASE_URL}/${result.id}`;
+
+	return c.json({ shortUrl, expirationDate });
 });
 
 export type AppType = typeof appRouter;

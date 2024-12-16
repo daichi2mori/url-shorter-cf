@@ -1,14 +1,9 @@
 import type { Context } from "hono";
+import type { Bindings } from "types";
 import type { PlatformProxy } from "wrangler";
 
 type Env = {
-	Bindings: {
-		MY_VAR: string;
-		BASE_URL: string;
-	};
-	Variables: {
-		MY_VAR_IN_VARIABLES: string;
-	};
+	Bindings: Bindings;
 };
 
 type GetLoadContextArgs = {
