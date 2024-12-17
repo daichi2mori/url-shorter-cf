@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from "@remix-run/cloudflare";
 import { useFetcher } from "@remix-run/react";
 import { hc } from "hono/client";
 import type { AppType } from "server";
+import type { ActionResponse } from "types";
 import { url, pipe, safeParse, string } from "valibot";
 
 export const action = async ({ context, request }: ActionFunctionArgs) => {
@@ -14,21 +15,36 @@ export const action = async ({ context, request }: ActionFunctionArgs) => {
 	if (result.success) {
 		const url = result.output;
 		const client = hc<AppType>(context.cloudflare.env.BASE_URL);
-		const response = await client.shorter.$post({
-			json: {
-				url: url,
-				expirationDays: 7,
-			},
-		});
-		const { shortUrl, expirationDate } = await response.json();
-		return Response.json({ shortUrl, expirationDate });
+
+		try {
+			const response = await client.shorter.$post({
+				json: {
+					url: url,
+					expirationDays: 7,
+				},
+			});
+			const { shortUrl, expirationDate } = await response.json();
+			return Response.json({ shortUrl, expirationDate }, { status: 201 });
+		} catch (error) {
+			return Response.json({ error: "短縮URL作成に失敗" }, { status: 500 });
+		}
 	}
+
+	return Response.json(
+		{
+			error: "URLを入力してください",
+		},
+		{
+			status: 400,
+		},
+	);
 };
 
 export default function Index() {
-	const fetcher = useFetcher<{ data: string }>();
+	const fetcher = useFetcher<ActionResponse>();
 
-	console.log(fetcher.data);
+	const isLoading =
+		fetcher.state === "loading" || fetcher.state === "submitting";
 
 	return (
 		<div>
@@ -41,8 +57,14 @@ export default function Index() {
 					placeholder="短縮したいURLを入力"
 					className="outline"
 				/>
-				<button type="submit">送信</button>
+				<button type="submit" disabled={isLoading}>
+					送信
+				</button>
 			</fetcher.Form>
+
+			{fetcher.data?.error && (
+				<p className="text-red-500">{fetcher.data.error}</p>
+			)}
 		</div>
 	);
 }
