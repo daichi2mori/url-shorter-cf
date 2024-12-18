@@ -62,6 +62,13 @@ export default function Index() {
 				</button>
 			</fetcher.Form>
 
+			{fetcher.data?.shortUrl && (
+				<div>
+					<p>{fetcher.data.shortUrl}</p>
+					<p>{fetcher.data.expirationDate}</p>
+				</div>
+			)}
+
 			{fetcher.data?.error && (
 				<p className="text-red-500">{fetcher.data.error}</p>
 			)}

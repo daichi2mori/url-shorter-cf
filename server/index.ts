@@ -1,33 +1,24 @@
 import { vValidator } from "@hono/valibot-validator";
 import { urls } from "db/schema";
-import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
 import type { Bindings } from "types";
 import { number, object, string } from "valibot";
-import {
-	calculateJSTExpirationISO,
-	generateJSTISOTime,
-	isPastDate,
-} from "./utils";
+import { calculateJSTExpirationISO, generateJSTISOTime } from "./utils";
 
 const app = new Hono<{ Bindings: Bindings }>();
 
 app.get("/:id", async (c) => {
 	const id = c.req.param("id");
 
-	const db = drizzle(c.env.DB);
-	const url = await db.select().from(urls).where(eq(urls.id, id)).get();
+	const url = await c.env.URL_SHORTER.get(id);
+
 	if (!url) {
 		return c.json({ error: "URL not found" }, 404);
 	}
 
-	if (isPastDate(url.expirationDate)) {
-		return c.json({ error: "URL expired" }, 410);
-	}
-
-	return c.redirect(url.originalUrl);
+	return c.redirect(url);
 });
 
 app.get("/url/all", async (c) => {
@@ -59,6 +50,8 @@ const appRouter = app.post("shorter", vValidator("json", schema), async (c) => {
 		.get();
 
 	const shortUrl = `${c.env.BASE_URL}/${result.id}`;
+
+	await c.env.URL_SHORTER.put(id, url);
 
 	return c.json({ shortUrl, expirationDate });
 });

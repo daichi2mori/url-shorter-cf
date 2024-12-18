@@ -1,5 +1,6 @@
 export type Bindings = {
 	DB: D1Database;
+	URL_SHORTER: KVNamespace;
 	BASE_URL: string;
 	MY_VAR: string;
 };
