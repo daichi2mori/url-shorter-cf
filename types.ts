@@ -3,6 +3,7 @@ export type Bindings = {
 	URL_SHORTER: KVNamespace;
 	BASE_URL: string;
 	MY_VAR: string;
+	API_KEY: string;
 };
 
 export type ActionResponse = {

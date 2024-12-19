@@ -14,7 +14,11 @@ export const action = async ({ context, request }: ActionFunctionArgs) => {
 
 	if (result.success) {
 		const url = result.output;
-		const client = hc<AppType>(context.cloudflare.env.BASE_URL);
+		const client = hc<AppType>(context.cloudflare.env.BASE_URL, {
+			headers: {
+				Authorization: `Bearer ${context.cloudflare.env.API_KEY}`,
+			},
+		});
 
 		try {
 			const response = await client.shorter.$post({
@@ -26,6 +30,7 @@ export const action = async ({ context, request }: ActionFunctionArgs) => {
 			const { shortUrl, expirationDate } = await response.json();
 			return Response.json({ shortUrl, expirationDate }, { status: 201 });
 		} catch (error) {
+			console.log(error);
 			return Response.json({ error: "短縮URL作成に失敗" }, { status: 500 });
 		}
 	}
