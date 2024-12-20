@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
 import { cors } from "hono/cors";
-import { NONCE, secureHeaders } from "hono/secure-headers";
+import { secureHeaders } from "hono/secure-headers";
 import { nanoid } from "nanoid";
 import type { Bindings } from "types";
 import { number, object, string } from "valibot";
@@ -12,26 +12,7 @@ import { calculateJSTExpirationISO, generateJSTISOTime } from "./utils";
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-app.use(
-	"*",
-	secureHeaders({
-		contentSecurityPolicy: {
-			scriptSrc: [NONCE],
-			defaultSrc: ["'self'"],
-		},
-		permissionsPolicy: {
-			fullscreen: ["self"],
-			bluetooth: ["none"],
-			payment: ["self", "http://localhost:5173"],
-			syncXhr: [],
-			camera: false,
-			microphone: true,
-			geolocation: ["*"],
-			usb: ["self"],
-			gyroscope: ["src"],
-		},
-	}),
-);
+app.use("*", secureHeaders());
 
 app.get("/:id", async (c) => {
 	const id = c.req.param("id");
