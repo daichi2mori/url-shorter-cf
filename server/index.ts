@@ -7,7 +7,7 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { nanoid } from "nanoid";
 import type { Bindings } from "types";
-import { number, object, string } from "valibot";
+import { url, number, object, pipe, string } from "valibot";
 import { calculateJSTExpirationISO, generateJSTISOTime } from "./utils";
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -26,21 +26,16 @@ app.get("/:id", async (c) => {
 	return c.redirect(url);
 });
 
-app.get("/url/all", async (c) => {
-	const db = drizzle(c.env.DB);
-	const urlList = await db.select().from(urls).all();
-	return c.json(urlList);
-});
-
 const schema = object({
-	url: string(),
+	url: pipe(string(), url()),
 	expirationDays: number(),
+	baseUrl: pipe(string(), url()),
 });
 
 const appRouter = app.post(
-	"shorter",
+	"/shorter",
 	cors({
-		origin: "http://localhost:5173",
+		origin: "https://url-shorter-cf.daichi2mori.workers.dev/",
 		allowMethods: ["POST"],
 		credentials: false,
 	}),
@@ -50,7 +45,7 @@ const appRouter = app.post(
 	},
 	vValidator("json", schema),
 	async (c) => {
-		const { url, expirationDays } = c.req.valid("json");
+		const { url, expirationDays, baseUrl } = c.req.valid("json");
 		const id = nanoid(8);
 		const expirationDate = calculateJSTExpirationISO(expirationDays);
 
@@ -66,11 +61,13 @@ const appRouter = app.post(
 			.returning({ id: urls.id })
 			.get();
 
-		const shortUrl = `${c.env.BASE_URL}/${result.id}`;
+		const shortUrl = `${baseUrl}${result.id}`;
 
 		await c.env.URL_SHORTER.put(id, url);
 
-		return c.json({ shortUrl, expirationDate });
+		c.header("Content-Type", "application/json");
+
+		return c.json({ shortUrl, expirationDate }, 201);
 	},
 );
 
