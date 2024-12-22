@@ -1,10 +1,9 @@
 import type { ActionFunctionArgs } from "@remix-run/cloudflare";
 import { useFetcher } from "@remix-run/react";
-import { hc } from "hono/client";
 import { useEffect, useState } from "react";
-import type { AppType } from "server";
-import type { ActionResponse } from "types";
+import type { ActionResponse, CreateUrlResponse } from "types";
 import { url, pipe, safeParse, string } from "valibot";
+import { createUrl } from "./db";
 
 const UrlSchema = pipe(string(), url());
 
@@ -26,27 +25,30 @@ export const action = async ({ context, request }: ActionFunctionArgs) => {
 
 	if (result.success) {
 		const url = result.output;
-		const client = hc<AppType>(request.url, {
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${context.cloudflare.env.API_KEY}`,
-			},
-		});
-
 		try {
-			const response = await client.shorter.$post({
-				json: {
-					url: url,
-					expirationDays: 7,
-					baseUrl: request.url,
-				},
-			});
+			const response = await createUrl(url, 7, request.url, context);
+			if (!response.ok) {
+				return Response.json(
+					{ error: "データベースとの通信に失敗しました" },
+					{ status: response.status },
+				);
+			}
 
-			const { shortUrl, expirationDate } = await response.json();
-			return Response.json({ shortUrl, expirationDate }, { status: 201 });
+			const data: CreateUrlResponse = await response.json();
+
+			return Response.json(
+				{
+					shortUrl: data.shortUrl,
+					expirationDate: data.expirationDate,
+				},
+				{ status: 201 },
+			);
 		} catch (error) {
 			console.error(error);
-			return Response.json({ error: "短縮URL作成に失敗" }, { status: 500 });
+			return Response.json(
+				{ error: "短縮URL作成に失敗しました" },
+				{ status: 500 },
+			);
 		}
 	}
 

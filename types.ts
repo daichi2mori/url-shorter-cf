@@ -6,6 +6,12 @@ export type Bindings = {
 	API_KEY: string;
 };
 
+export type CreateUrlResponse = {
+	shortUrl: string;
+	expirationDate: string;
+	ok: boolean;
+};
+
 export type ActionResponse = {
 	expirationDate?: string;
 	shortUrl?: string;
