@@ -2,8 +2,8 @@ import type { AppLoadContext } from "@remix-run/cloudflare";
 import { urls } from "db/schema";
 import { drizzle } from "drizzle-orm/d1";
 import { nanoid } from "nanoid";
-import { calculateJSTExpirationISO, generateJSTISOTime } from "server/utils";
 import type { CreateUrlResponse } from "types";
+import { calculateJSTExpirationISO, generateJSTISOTime } from "~/utils/utils";
 
 export async function createUrl(
 	url: string,
