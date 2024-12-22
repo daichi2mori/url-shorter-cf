@@ -1,125 +1,105 @@
 import type { ActionFunctionArgs } from "@remix-run/cloudflare";
 import { useFetcher } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ActionResponse, CreateUrlResponse } from "types";
 import { url, pipe, safeParse, string } from "valibot";
-import { createUrl } from "./db";
+import { UrlForm } from "~/components/form";
+import { UrlDisplay } from "~/components/url-display";
+import { createUrl } from "../server/db";
 
-const UrlSchema = pipe(string(), url());
+const URL_SCHEMA = pipe(string(), url());
+const GENERIC_ERROR_MESSAGE = "短縮URL作成に失敗しました";
+const SUCCESS_STATUS = 201;
+const ERROR_STATUS = 400;
+const SERVER_ERROR_STATUS = 500;
 
-function formatDateToJapanese(dateString: string): string {
-	const date = new Date(dateString);
-
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, "0");
-	const day = String(date.getDate()).padStart(2, "0");
-
-	return `${year}年${month}月${day}日`;
-}
-
-export const action = async ({ context, request }: ActionFunctionArgs) => {
+export async function action({ context, request }: ActionFunctionArgs) {
 	const formData = await request.formData();
 	const urlData = formData.get("url");
 
-	const result = safeParse(UrlSchema, urlData);
+	const result = safeParse(URL_SCHEMA, urlData);
 
-	if (result.success) {
-		const url = result.output;
-		try {
-			const response = await createUrl(url, 7, request.url, context);
-			if (!response.ok) {
-				return Response.json(
-					{ error: "データベースとの通信に失敗しました" },
-					{ status: response.status },
-				);
-			}
-
-			const data: CreateUrlResponse = await response.json();
-
-			return Response.json(
-				{
-					shortUrl: data.shortUrl,
-					expirationDate: data.expirationDate,
-				},
-				{ status: 201 },
-			);
-		} catch (error) {
-			console.error(error);
-			return Response.json(
-				{ error: "短縮URL作成に失敗しました" },
-				{ status: 500 },
-			);
-		}
+	if (!result.success) {
+		return Response.json(
+			{ shortUrl: "", expirationDate: "", error: "URLを入力してください" },
+			{ status: ERROR_STATUS },
+		);
 	}
 
-	return Response.json(
-		{
-			error: "URLを入力してください",
-		},
-		{
-			status: 400,
-		},
-	);
-};
+	const url = result.output;
+
+	console.log(url);
+
+	try {
+		const response = await createUrl(url, 7, request.url, context);
+		if (!response.ok) {
+			return Response.json(
+				{
+					shortUrl: "",
+					expirationDate: "",
+					error: "データベースとの通信に失敗しました",
+				},
+				{ status: response.status },
+			);
+		}
+
+		const data: CreateUrlResponse = await response.json();
+
+		console.log(data);
+
+		return Response.json(
+			{
+				shortUrl: data.shortUrl,
+				expirationDate: data.expirationDate,
+				error: "",
+			},
+			{ status: SUCCESS_STATUS },
+		);
+	} catch (error) {
+		console.error(error);
+		return Response.json(
+			{ shortUrl: "", expirationDate: "", error: GENERIC_ERROR_MESSAGE },
+			{ status: SERVER_ERROR_STATUS },
+		);
+	}
+}
 
 export default function Index() {
+	const [originalUrl, setOriginalUrl] = useState("");
+	const [showToast, setShowToast] = useState(false);
 	const fetcher = useFetcher<ActionResponse>();
 
-	const isLoading =
-		fetcher.state === "loading" || fetcher.state === "submitting";
-
-	const [url, setUrl] = useState("");
-	const [clientError, setClientError] = useState<string | null>(null);
-
-	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const value = e.target.value;
-		setUrl(value);
-
-		const result = safeParse(UrlSchema, value);
-
-		if (!result.success) {
-			setClientError("有効なURLを入力してください");
-		} else {
-			setClientError(null);
-		}
-	};
-
-	useEffect(() => {
-		if (fetcher.state === "idle" && fetcher.data) {
-			setUrl(""); // 入力を空にする
-		}
-	}, [fetcher.state, fetcher.data]);
-
 	return (
-		<div>
-			<h1>Remix and Hono</h1>
-
-			<fetcher.Form method="post">
-				<input
-					type="text"
-					name="url"
-					placeholder="短縮したいURLを入力"
-					className="outline"
-					value={url}
-					onChange={handleInputChange}
+		<div className="container mx-auto pt-7 px-3 flex justify-center">
+			<div className="max-w-[800px] w-full">
+				<h1 className="text-[#A0C238] font-extrabold text-3xl md:text-5xl text-center tracking-wider mt-10">
+					URL短縮サイト
+				</h1>
+				<UrlForm
+					fetcher={fetcher}
+					setOriginalUrl={setOriginalUrl}
+					schema={URL_SCHEMA}
 				/>
-				<button type="submit" disabled={isLoading || !!clientError}>
-					送信
-				</button>
-			</fetcher.Form>
 
-			<div>
-				{fetcher.data?.shortUrl && <p>{fetcher.data.shortUrl}</p>}
-				{fetcher.data?.expirationDate && (
-					<p>有効期限：{formatDateToJapanese(fetcher.data.expirationDate)}</p>
+				{fetcher.data?.error && (
+					<p className="text-red-500">{fetcher.data.error}</p>
+				)}
+
+				{fetcher.data && (
+					<UrlDisplay
+						originalUrl={originalUrl}
+						shortUrl={fetcher.data.shortUrl}
+						expirationDate={fetcher.data.expirationDate}
+						setShowToast={setShowToast}
+					/>
 				)}
 			</div>
 
-			{fetcher.data?.error && (
-				<p className="text-red-500">{fetcher.data.error}</p>
+			{showToast && (
+				<div className="fixed top-8 right-1/2 translate-x-1/2 bg-neutral-600 text-white text-center w-1/2 py-3 rounded duration-300">
+					<p>URLをコピーしました</p>
+				</div>
 			)}
-
-			{clientError && <p className="text-red-500">{clientError}</p>}
 		</div>
 	);
 }

@@ -13,7 +13,7 @@ export type CreateUrlResponse = {
 };
 
 export type ActionResponse = {
-	expirationDate?: string;
-	shortUrl?: string;
-	error?: string;
+	expirationDate: string;
+	shortUrl: string;
+	error: string;
 };

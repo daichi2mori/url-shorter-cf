@@ -4,5 +4,5 @@
 
 html,
 body {
-  background-color: white;
+  @apply bg-[#F6F5F2];
 }
