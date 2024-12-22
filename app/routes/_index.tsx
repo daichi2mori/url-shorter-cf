@@ -28,8 +28,6 @@ export async function action({ context, request }: ActionFunctionArgs) {
 
 	const url = result.output;
 
-	console.log(url);
-
 	try {
 		const response = await createUrl(url, 7, request.url, context);
 		if (!response.ok) {
@@ -44,8 +42,6 @@ export async function action({ context, request }: ActionFunctionArgs) {
 		}
 
 		const data: CreateUrlResponse = await response.json();
-
-		console.log(data);
 
 		return Response.json(
 			{
